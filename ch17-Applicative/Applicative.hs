@@ -10,6 +10,8 @@ class Functor f => Applicative f where
 
   (<*>) :: f (a -> b) -> f a -> f b
 
+-- []
+
 instance Applicative [] where
   pure :: a -> [a]
   pure x = [x]
@@ -17,15 +19,20 @@ instance Applicative [] where
   (<*>) :: [a -> b] -> [a] -> [b]
   fs <*> xs = zipWith ($) fs xs
 
+-- IO
+
 instance Applicative IO where
   pure :: a -> IO a
   pure = return
 
   (<*>) :: IO (a -> b) -> IO a -> IO b
-  fio <*> xio = do
+  fio <*> x = do
     f <- fio
-    x <- xio
-    return (f x)
+    fmap f x
+  -- Or
+  -- fio <*> x = fio >>= (`fmap` x)
+
+-- (,) a
 
 instance Monoid a => Applicative ((,) a) where
   pure :: b -> (a, b)
@@ -34,6 +41,8 @@ instance Monoid a => Applicative ((,) a) where
   (<*>) :: (a, b -> c) -> (a, b) -> (a, c)
   (a1, f) <*> (a2, x) = (mappend a1 a2, f x)
 
+-- (->) a
+
 instance Applicative ((->) a) where
   pure :: b -> a -> b
   pure x _ = x
@@ -41,7 +50,7 @@ instance Applicative ((->) a) where
   (<*>) :: (a -> b -> c) -> (a -> b) -> (a -> c)
   f <*> g = \x -> f x (g x)
 
---
+-- Pair a
 
 data Pair a = Pair a a deriving Show
 
@@ -55,6 +64,8 @@ instance Applicative Pair where
   (<*>) :: Pair (a -> b) -> Pair a -> Pair b
   (Pair f g) <*> (Pair x y) = Pair (f x) (g y)
 
+-- Two a b
+
 data Two a b = Two a b
 
 instance Functor (Two a) where
@@ -66,6 +77,8 @@ instance Monoid a => Applicative (Two a) where
 
   (<*>) :: Two a (b -> c) -> Two a b -> Two a c
   Two a1 f <*> Two a2 x = Two (mappend a1 a2) (f x)
+
+-- Three a b c
 
 data Three a b c = Three a b c
 
@@ -79,6 +92,8 @@ instance (Monoid a, Monoid b) => Applicative (Three a b) where
   (<*>) :: Three a b (c -> d) -> Three a b c -> Three a b d
   Three a1 b1 f <*> Three a2 b2 x = Three (mappend a1 a2) (mappend b1 b2) (f x)
 
+-- Three' a b
+
 data Three' a b = Three' a b b
 
 instance Functor (Three' a) where
@@ -90,6 +105,8 @@ instance Monoid a => Applicative (Three' a) where
 
   (<*>) :: Three' a (b -> c) -> Three' a b -> Three' a c
   Three' a1 f g <*> Three' a2 x y = Three' (mappend a1 a2) (f x) (g y)
+
+-- Four a b c d
 
 data Four a b c d = Four a b c d
 
