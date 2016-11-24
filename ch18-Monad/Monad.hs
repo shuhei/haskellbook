@@ -1,5 +1,3 @@
-{-# LANGUAGE InstanceSigs #-}
-
 module Monad where
 
 import Prelude hiding (Monad, (>>=), (>>), return, Left, Right)

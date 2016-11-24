@@ -15,18 +15,18 @@ l1 = fmap
 l2 :: Monad m => (a -> b -> c) -> m a -> m b -> m c
 l2 f x y = f <$> x <*> y
 
--- application
+-- <**>
 
 a :: Monad m => m a -> m (a -> b) -> m b
 a = flip (<*>)
 
--- meh
+-- forM
 
 meh :: Monad m => [a] -> (a -> m b) -> m [b]
 meh [] _ = return []
 meh (x : xs) f = l2 (:) (f x) (meh xs f)
 
--- flipType
+-- sequence
 
 flipType :: Monad m => [m a] -> m [a]
 flipType xs = meh xs id
