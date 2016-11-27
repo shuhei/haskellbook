@@ -1,5 +1,7 @@
 module MonadFuncs where
 
+-- bind
+
 bind :: Monad m => (a -> m b) -> m a -> m b
 bind f x = j (fmap f x)
 
