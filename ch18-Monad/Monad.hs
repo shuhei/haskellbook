@@ -75,8 +75,7 @@ instance Applicative List where
   pure x = Cons x Nil
 
   Nil <*> _ = Nil
-  _ <*> Nil = Nil
-  (Cons f fs) <*> (Cons x xs) = Cons (f x) (fs <*> xs)
+  (Cons f fs) <*> xs = fmap f xs `mappend` (fs <*> xs)
 
 instance Monoid (List a) where
   mempty = Nil
