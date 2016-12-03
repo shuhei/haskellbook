@@ -29,9 +29,9 @@ shortyGen = replicateM 7 (randomElement alphaNum)
 saveURI :: R.Connection
         -> BC.ByteString
         -> BC.ByteString
-        -> IO (Either R.Reply R.Status)
+        -> IO (Either R.Reply Bool)
 saveURI conn shortURI uri =
-  R.runRedis conn $ R.set shortURI uri
+  R.runRedis conn $ R.setnx shortURI uri
 
 getURI :: R.Connection
        -> BC.ByteString
@@ -63,6 +63,7 @@ shortyFound :: TL.Text -> TL.Text
 shortyFound tbs =
   TL.concat ["<a href=\"", tbs, "\">", tbs, "</a>"]
 
+-- TODO: Non 200 status code for errors.
 app :: R.Connection -> ScottyM ()
 app conn = do
   -- TODO: Shouldn't it be POST because it creates a record?
@@ -76,7 +77,10 @@ app conn = do
         let shorty = BC.pack shawty
             uri' = encodeUtf8 (TL.toStrict uri)
         resp <- liftIO (saveURI conn shorty uri')
-        html (shortyCreated resp shawty)
+        case resp of
+          Left reply -> text (TL.pack (show reply))
+          Right True -> html (shortyCreated resp shawty)
+          Right False -> text "random short URI collided"
       Nothing -> text (shortyAintUri uri)
   get "/:short" $ do
     short <- param "short"
