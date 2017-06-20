@@ -5,3 +5,7 @@
 ```sh
 ghci Compose.hs
 ```
+
+```sh
+ghci BiFunctor.hs
+```
