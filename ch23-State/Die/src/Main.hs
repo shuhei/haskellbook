@@ -6,7 +6,11 @@ import Control.Monad.Trans.State
 import System.Random
 
 main :: IO ()
-main = print "Hello, world!"
+main = do
+  print =<< evalState rollDieThreeTimes . mkStdGen <$> randomIO
+  print =<< rollsToGetTwenty . mkStdGen <$> randomIO
+  print =<< rollsToGetN 30 . mkStdGen <$> randomIO
+  print =<< rollsCountLogged 30 . mkStdGen <$> randomIO
 
 data Die
   = DieOne
