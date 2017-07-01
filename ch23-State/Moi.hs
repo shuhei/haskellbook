@@ -5,6 +5,13 @@ main = do
   print $ runMoi (pure (*2) <*> pure 3) 4
   let m = return 3
   print $ runMoi (m >>= (\x -> Moi $ \s -> (x + s, s))) 5
+  print $ runMoi get "curryIsAmaze"
+  print $ exec (put "wilma") "daphne"
+  print $ exec get "scooby papu"
+  print $ eval get "bunnicula"
+  print $ eval get "stake a bunny"
+  print $ runMoi (modify (+1)) 0
+  print $ runMoi (modify (+1) >> modify (+2)) 0
 
 newtype Moi s a =
   Moi { runMoi :: s -> (a, s) }
@@ -39,3 +46,25 @@ instance Monad (Moi s) where
       let (a, s1) = f s
           (Moi sb) = g a
       in sb s1
+
+-- FUNCTIONS
+
+get :: Moi s s
+get =
+  Moi $ \s -> (s, s)
+
+put :: s -> Moi s ()
+put s =
+  Moi $ const ((), s)
+
+exec :: Moi s a -> s -> s
+exec (Moi f) =
+  snd . f
+
+eval :: Moi s a -> s -> a
+eval (Moi f) =
+  fst . f
+
+modify :: (s -> s) -> Moi s ()
+modify f =
+  Moi $ \s -> ((), f s)
