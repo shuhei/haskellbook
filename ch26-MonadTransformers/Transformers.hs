@@ -1,6 +1,7 @@
 {-# LANGUAGE InstanceSigs #-}
 
 import qualified Control.Arrow as A
+import Control.Monad.Trans.Class
 
 -- MaybeT
 
@@ -59,6 +60,10 @@ instance (Monad m) => Monad (EitherT e m) where
       case ea of
         Left e -> return $ Left e
         Right a -> runEitherT $ f a
+
+instance MonadTrans (EitherT e) where
+  lift :: Monad m => m a -> EitherT e m a
+  lift x = EitherT $ Right <$> x
 
 swapEither :: Either e a -> Either a e
 swapEither (Left e) = Right e
@@ -128,3 +133,9 @@ instance (Monad m) => Monad (StateT s m) where
     StateT $ \s -> do
       (a, s1) <- sma s
       runStateT (f a) s1
+
+instance MonadTrans (StateT s) where
+  lift :: (Monad m) => m a -> StateT s m a
+  lift x = StateT $ \s -> do
+    a <- x
+    return (a, s)
