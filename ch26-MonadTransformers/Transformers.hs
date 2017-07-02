@@ -1,5 +1,7 @@
 {-# LANGUAGE InstanceSigs #-}
 
+import qualified Control.Arrow as A
+
 -- MaybeT
 
 newtype MaybeT m a =
@@ -97,3 +99,32 @@ instance (Monad m) => Monad (ReaderT r m) where
     ReaderT $ \r -> do
       a <- rma r
       runReaderT (f a) r
+
+-- StateT
+
+newtype StateT s m a =
+  StateT { runStateT :: s -> m (a, s) }
+
+instance (Functor m) => Functor (StateT s m) where
+  fmap f (StateT sma) =
+    StateT $ \s -> A.first f <$> sma s
+
+instance (Monad m) => Applicative (StateT s m) where
+  pure :: a -> StateT s m a
+  pure x = StateT $ \s -> pure (x, s)
+
+  (<*>) :: StateT s m (a -> b) -> StateT s m a -> StateT s m b
+  (StateT smab) <*> (StateT sma) =
+    StateT $ \s -> do
+      (ab, s1) <- smab s
+      (a, s2) <- sma s1
+      return (ab a, s2)
+
+instance (Monad m) => Monad (StateT s m) where
+  return = pure
+
+  (>>=) :: StateT s m a -> (a -> StateT s m b) -> StateT s m b
+  (StateT sma) >>= f =
+    StateT $ \s -> do
+      (a, s1) <- sma s
+      runStateT (f a) s1
