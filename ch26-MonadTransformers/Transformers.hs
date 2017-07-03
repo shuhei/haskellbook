@@ -2,6 +2,7 @@
 
 import qualified Control.Arrow as A
 import Control.Monad.Trans.Class
+import Control.Monad.IO.Class
 
 -- MaybeT
 
@@ -31,6 +32,12 @@ instance (Monad m) => Monad (MaybeT m) where
       case ma of
         Nothing -> return Nothing
         Just a -> runMaybeT $ f a
+
+instance MonadTrans MaybeT where
+  lift = MaybeT . fmap Just
+
+instance (MonadIO m) => MonadIO (MaybeT m) where
+  liftIO = lift . liftIO
 
 -- EitherT
 
@@ -63,7 +70,10 @@ instance (Monad m) => Monad (EitherT e m) where
 
 instance MonadTrans (EitherT e) where
   lift :: Monad m => m a -> EitherT e m a
-  lift x = EitherT $ Right <$> x
+  lift = EitherT . fmap Right
+
+instance (MonadIO m) => MonadIO (EitherT e m) where
+  liftIO = lift . liftIO
 
 swapEither :: Either e a -> Either a e
 swapEither (Left e) = Right e
@@ -105,6 +115,12 @@ instance (Monad m) => Monad (ReaderT r m) where
       a <- rma r
       runReaderT (f a) r
 
+instance MonadTrans (ReaderT r) where
+  lift = ReaderT . const
+
+instance (MonadIO m) => MonadIO (ReaderT r m) where
+  liftIO = lift . liftIO
+
 -- StateT
 
 newtype StateT s m a =
@@ -139,3 +155,6 @@ instance MonadTrans (StateT s) where
   lift x = StateT $ \s -> do
     a <- x
     return (a, s)
+
+instance (MonadIO m) => MonadIO (StateT s m) where
+  liftIO = lift . liftIO
