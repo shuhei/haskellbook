@@ -10,19 +10,33 @@ import System.Process (system)
 import System.Environment (getArgs)
 import System.IO (stdout, hSetBuffering, BufferMode (NoBuffering))
 
-type Scores = (Int, Int)
-
 data Guess =
   Guess { guessNumber :: Int
         , guessTotal :: Int
         }
   deriving (Show)
 
+data Store =
+  Store { storeScores :: (Int, Int)
+        , storeHistory :: History
+        }
+
 data Config =
   Config { vsHuman :: Bool
          , playerName1 :: String
          , playerName2 :: String
          }
+
+type History = [Int]
+
+guessTrigram :: History -> Maybe Int
+guessTrigram history@(a : b : _) = go history
+  where
+    go (x : x1 : x2 : xs)
+      | a == x1 && b == x2 = Just x
+      | otherwise          = go (x1 : x2 : xs)
+    go _ = Nothing
+guessTrigram _ = Nothing
 
 -- Get input until a parsable value is provided and it matches the given predicate
 readPersistently :: Read a => (a -> Bool) -> String -> IO a
@@ -48,11 +62,15 @@ readGuess name = do
   system "clear"
   return $ Guess n total
 
-randomGuess :: IO Guess
-randomGuess = do
+computeGuess :: History -> IO Guess
+computeGuess history = do
   n <- randomRIO (0, 5)
-  total <- (+ n) <$> randomRIO (0, 5)
-  return $ Guess n total
+  m <- case guessTrigram history of
+    Just guessed -> do
+      putStrLn $ "... Maybe " ++ show guessed ++ "?"
+      return guessed
+    Nothing -> randomRIO (0, 5)
+  return $ Guess n (n + m)
 
 hasWon :: Int -> Guess -> Bool
 hasWon total (Guess _ guessed) =
@@ -63,17 +81,19 @@ showResult total guess =
   (if hasWon total guess then "Won!" else "Lost!") ++ " " ++ show guess
 
 -- ReaderT might be too much here, but this is an exercise for Monad Transformers!
-step :: ReaderT Config (StateT Scores IO) ()
+step :: ReaderT Config (StateT Store IO) ()
 step = do
   Config withHuman name1 name2 <- ask
+  Store (score1, score2) history <- lift get
+
   guess1 <- liftIO $ readGuess name1
-  guess2 <- liftIO $ if withHuman then readGuess name2 else randomGuess
+  guess2 <- liftIO $ if withHuman then readGuess name2 else computeGuess history
 
   let total = guessNumber guess1 + guessNumber guess2
-  (score1, score2) <- lift get
   let newScore1 = score1 + if hasWon total guess1 then 1 else 0
       newScore2 = score2 + if hasWon total guess2 then 1 else 0
-  lift $ put (newScore1, newScore2)
+      newHistory = guessNumber guess1 : history
+  lift $ put $ Store (newScore1, newScore2) newHistory
 
   liftIO $ do
     putStrLn $ name1 ++ ": " ++ showResult total guess1
@@ -102,10 +122,10 @@ main :: IO ()
 main = do
   hSetBuffering stdout NoBuffering
   config@(Config _ name1 name2) <- makeConfig <$> getArgs
-  (s1, s2) <- loopStateT shouldExit (0, 0) $ runReaderT step config
+  Store (s1, s2) _ <- loopStateT shouldExit (Store (0, 0) []) $ runReaderT step config
   when (isWinner s1) $ putStrLn $ "Conguratulations, " ++ name1 ++ "!"
   when (isWinner s2) $ putStrLn $ "Conguratulations, " ++ name2 ++ "!"
   return ()
   where
     isWinner = (>= 3)
-    shouldExit (s1, s2) = isWinner s1 || isWinner s2
+    shouldExit (Store (s1, s2) _) = isWinner s1 || isWinner s2
